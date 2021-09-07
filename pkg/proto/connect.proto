@@ -1,0 +1,222 @@
+syntax = "proto3";
+package pb;
+option go_package = "/";
+
+
+enum IMPackageType {
+  IM_UNKNOWN = 0; // 未知
+  IM_SIGN_IN = 1; // 设备登录请求
+  IM_SYNC = 2; // 消息同步触发
+  IM_HEARTBEAT = 3; // 心跳
+  IM_MESSAGE = 4; // 消息投递
+  IM_SUBSCRIBE_ROOM = 5; // 订阅房间
+  IM_MESSAGE_ACK = 6; // 消息回包
+}
+
+/************************************消息体定义开始************************************/
+// 单条消息投递内容（估算大约100个字节）,todo 通知栏提醒
+message ImMessage {
+  ImSender sender = 1; // 发送者
+  ImReceiverType receiver_type = 2; // 接收者类型，1：user;2:group
+  string receiver_id = 3; // 用户id或者群组id
+  repeated string to_user_ids = 4; // 需要@的用户id列表
+  ImMessageType message_type = 5; // 消息类型
+  bytes message_content = 6; // 消息内容
+  int64 send_time = 7; // 消息发送时间戳，精确到毫秒
+  string msg_id = 8; // 消息 id
+  ImSceneType scene_type = 9; // 0：文字聊天场景 1：视频聊天场景 2：匹配场景
+}
+
+message ImSender {
+  ImSenderType sender_type = 1; // 发送者类型，1:系统,2:用户,3:第三方业务系统
+  string sender_id = 2; // 发送者id
+  string avatar_url = 3; // 昵称
+  string nickname = 4; // 头像
+  string extra = 5; // 扩展字段
+}
+
+// 消息类型
+enum ImMessageType {
+  IM_MT_UNKNOWN = 0; // 未知
+  IM_MT_TEXT = 1; // 文本
+  IM_MT_FACE = 2; // 表情
+  IM_MT_VOICE = 3; // 语音消息
+  IM_MT_IMAGE = 4; // 图片
+  IM_MT_FILE = 5; // 文件
+  IM_MT_LOCATION = 6; // 地理位置
+  IM_MT_COMMAND = 7; // 指令推送
+  IM_MT_CUSTOM = 8; // 自定义
+  IM_MT_GIFT = 9; // 礼物消息
+  IM_MT_VIDEO = 10; // 视频消息
+}
+
+enum ImSceneType {
+  IM_MESSAGE_SCENE = 0;
+  IM_CHAT_SCENE = 1;
+  IM_MATCH_SCENE = 2;
+  IM_SYSTEM_SCENE = 3;
+  IM_COMMAND_SCENE = 4;
+}
+
+
+// 文本消息
+message ImText {
+  string text = 1; // 文本消息内容
+}
+
+// 表情消息
+message ImFace {
+  int64 face_id = 1;
+  string face_url = 2;
+}
+
+// 语音消息
+message ImVoice {
+  string md5 = 1; // 语音包id
+  int32 duration = 2; // 语音时长
+  string url = 3; // 语音文件URL
+}
+
+// 图片消息
+message ImImage {
+  int32 width = 1; // 图片宽度
+  int32 height = 2; // 图片长度
+  string url = 3; // 图片URL
+}
+
+// 文件消息
+message ImFile {
+  int64 id = 12; // 文件id
+  string name = 13; // 文件名
+  int64 size = 14; // 文件大小
+  string url = 15; // 文件url
+}
+
+// 地理位置消息
+message ImLocation {
+  string desc = 1; // 描述
+  double latitude = 2; // 经度
+  double longitude = 3; // 纬度
+}
+
+// Command 指令推送，1000以下，IM内部用，1000以上，留给业务用
+message ImCommand {
+  ImCommandType command_code = 1; // 指令码
+  bytes command_data = 2; // 数据内容
+}
+
+// 礼物消息
+message ImGift {
+  int32 gid = 1; // 礼物 id
+  string gicon = 2; // 礼物 icon
+  string gname = 3; // 礼物 名称
+  string md5 = 4; // 礼物 md5
+  int32 duration = 5; // 礼物 播放时长
+}
+
+// 自定义消息
+message ImCustom {
+  string data = 1; // 自定义数据
+}
+
+// 视频消息
+message ImVideo {
+  string video_url = 1; // 视频地址
+  int32 duration = 2; // 视频时长
+  string url = 3; // 封面地址
+}
+
+
+// 指令类型
+enum ImCommandType {
+  IM_COMMAND_UNKNOWN = 0;        // 未知
+  IM_COMMAND_CHAT_REQUEST = 1;   // 请求通话
+  IM_COMMAND_CHAT_OPERATE = 2;   // 通话操作
+  IM_COMMAND_CHAT_START = 3;     // 通话开始
+  IM_COMMAND_CHAT_END = 4;       // 通话结束
+}
+
+message CommandChatRequest {
+  int32 record_id = 1;
+  int32 timestamp = 2;
+  string cid = 3;
+  string toId = 4;
+  string fromId = 5;
+  string name = 6;
+  int32 callType = 7;
+  int32 channel = 8;
+  int32 price = 9;
+  int32 from_type = 10;
+  string head = 11;
+  bool fakeCall = 12;
+  int32 coin = 13;
+  int32 createType = 14;
+}
+
+message CommandChatOperate {
+  int32 action = 1;
+  string cid = 2;
+}
+
+/************************************消息体定义结束************************************/
+
+// 上行数据
+message ImInput {
+  IMPackageType type = 1; // 包的类型
+  int64 request_id = 2; // 请求id
+  bytes data = 3; // 数据
+}
+
+// 下行数据
+message ImOutput {
+  IMPackageType type = 1; // 包的类型
+  int64 request_id = 2; // 请求id
+  int32 code = 3; // 错误码
+  string message = 4; // 错误信息
+  bytes data = 5; // 数据
+}
+
+// 设备登录,package_type:1
+message ImSignInInput {
+  string device_id = 1; // 设备id
+  string user_id = 2; // 用户id
+  string token = 3; // 秘钥
+}
+
+// 设备登录,package_type:1
+message ImSignInOutput {
+  string user_id = 1; // 用户id
+  int32 success = 2; // 登录状态
+}
+
+
+// 订阅房间请求
+message ImSubscribeRoomInput {
+  int64 room_id = 1; // 房间ID，如果为0，取消房间订阅
+  int64 seq = 2; // 消息消息序列号，
+}
+
+enum ImReceiverType {
+  IM_RT_UNKNOWN = 0; // 未知
+  IM_RT_USER = 1; // 用户
+  IM_RT_GROUP = 2; // 群组
+  IM_RT_ROOM = 3; // 房间
+}
+
+// 消息投递,package_type:4
+message ImMessageSend {
+  ImMessage message = 1; // 消息
+}
+
+enum ImSenderType {
+  IM_ST_UNKNOWN = 0; // 未知的
+  IM_ST_SYSTEM = 1; // IM系统
+  IM_ST_USER = 2; // 用户
+  IM_ST_BUSINESS = 3; // 业务方
+}
+
+enum ImMessageStatus {
+  IM_MS_UNKNOWN = 0; // 未知的
+  IM_MS_NORMAL = 1; // 正常的
+  IM_MS_RECALL = 2; // 撤回
+}
