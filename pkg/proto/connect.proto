@@ -29,10 +29,13 @@ message ImMessage {
 
 message ImSender {
   ImSenderType sender_type = 1; // 发送者类型，1:系统,2:用户,3:第三方业务系统
-  string sender_id = 2; // 发送者id
-  string avatar_url = 3; // 昵称
-  string nickname = 4; // 头像
-  string extra = 5; // 扩展字段
+  string sender_id = 2;   // 发送者id
+  string avatar_url = 3;  // 昵称
+  string nickname = 4;    // 头像
+  int32 rid = 5;         // 用户数字id
+  string country = 6;     // 用户国家
+  int32 age = 7;        // 用户 年龄
+  string extra = 8;      // 扩展字段
 }
 
 // 消息类型
@@ -98,11 +101,18 @@ message ImLocation {
   double latitude = 2; // 经度
   double longitude = 3; // 纬度
 }
+enum ImCommandScene {
+  CommandScene_UNKNOW = 0;
+  CommandScene_CHAT = 1;
+  CommandScene_MATCH = 2;
+  CommandScene_COIN_CHANGE = 3;
+}
 
 // Command 指令推送，1000以下，IM内部用，1000以上，留给业务用
 message ImCommand {
   ImCommandType command_code = 1; // 指令码
   bytes command_data = 2; // 数据内容
+  ImCommandScene scene_type = 3; //
 }
 
 // 礼物消息
@@ -110,7 +120,7 @@ message ImGift {
   int32 gid = 1; // 礼物 id
   string gicon = 2; // 礼物 icon
   string gname = 3; // 礼物 名称
-  string md5 = 4; // 礼物 md5
+  string md5_v1 = 4; // 礼物 md5
   int32 duration = 5; // 礼物 播放时长
 }
 
@@ -127,35 +137,147 @@ message ImVideo {
 }
 
 
+
+/************************************指令消息定义开始************************************/
+
 // 指令类型
 enum ImCommandType {
-  IM_COMMAND_UNKNOWN = 0;        // 未知
-  IM_COMMAND_CHAT_REQUEST = 1;   // 请求通话
-  IM_COMMAND_CHAT_OPERATE = 2;   // 通话操作
-  IM_COMMAND_CHAT_START = 3;     // 通话开始
-  IM_COMMAND_CHAT_END = 4;       // 通话结束
+  IM_COMMAND_UNKNOWN = 0;                  // 未知
+  IM_COMMAND_CHAT_REQUEST = 1;             // 请求通话
+  IM_COMMAND_CHAT_OPERATE = 2;             // 通话操作
+  IM_COMMAND_CHAT_START = 3;               // 通话开始
+  IM_COMMAND_CHAT_END = 4;                 // 通话结束
+  IM_COMMAND_CHAT_STREAM_UPLOAD = 5;       // 通话推拉流状态上报
+  IM_COMMAND_MATCH_REQUEST = 6;            // 匹配请求
+
+  IM_COMMAND_COIN_CHANGE = 7;              // 金币变更
+  IM_COMMAND_SCENE_UPLOAD = 8;             // 场景上报
 }
+
+enum ChatRequestCreateType {
+  FROM_UNKNOWN = 0;
+  FROM_SELF = 1;
+  FROM_OTHER = 2;
+}
+
+// 0 正常匹配逻辑 1 审核中匹配逻辑 2 审核中直接跳转 message 页面逻辑
+enum MatchReqMatchType {
+  TYPE_MATCH_NORMAL = 0;
+  TYPE_MATCH_REVIEW = 1;
+  TYPE_MATCH_MESSAGE = 2;
+}
+
+message CommandMatchRequest {
+  string match_id = 1;
+  MatchReqMatchType match_type = 2;
+  ChatRequestCreateType createType = 3;
+  int32 duration = 4;
+  int64 timestamp = 5;
+}
+
 
 message CommandChatRequest {
   int32 record_id = 1;
-  int32 timestamp = 2;
+  int64 timestamp = 2;
   string cid = 3;
-  string toId = 4;
-  string fromId = 5;
-  string name = 6;
-  int32 callType = 7;
-  int32 channel = 8;
-  int32 price = 9;
-  int32 from_type = 10;
-  string head = 11;
-  bool fakeCall = 12;
-  int32 coin = 13;
-  int32 createType = 14;
+  int32 callType = 4;
+  int32 channel = 5;
+  int32 price = 6;
+  int32 from_type = 7;
+  int32 coin = 8;
+  ChatRequestCreateType createType = 9;
+}
+
+enum ChatOperateAction {
+  IM_CHAT_ACTION_UNKNOWN = 0;        // 未知
+  IM_CHAT_ACTION_AGREE = 1;          // 同意
+  IM_CHAT_ACTION_REJECT = 2;         // 拒绝
+  IM_CHAT_ACTION_CANCEL = 3;         // 取消
+  IM_CHAT_ACTION_TIMEOUT = 4;        // 超时取消
 }
 
 message CommandChatOperate {
-  int32 action = 1;
+  ChatOperateAction action = 1;
   string cid = 2;
+}
+
+
+enum ChatStreamStatus {
+  IM_CHAT_STATUS_UNKNOWN = 0;         // 未知
+  IM_CHAT_STATUS_SUCCESS = 1;         // 成功
+  IM_CHAT_STATUS_PUSH_FAIL = 2;       // 推流失败
+  IM_CHAT_STATUS_PULL_FAIL = 3;       // 拉流失败
+}
+
+message CommandChatStreamStatusUpload {
+  ChatStreamStatus status = 1;
+  string cid = 2;
+}
+
+message CommandChatStart {
+  string cid = 1;
+  int32 interval = 2;
+  int64 timestamp = 3;
+}
+
+enum ChatEndType {
+  IM_CHAT_END_BY_USER = 0;
+  IM_CHAT_END_BY_SYSTEM = 1;
+}
+
+enum ChatEndReason {
+    IM_CHAT_END_REASON_SUCCESS = 0;
+    IM_CHAT_END_REASON_STREAM_PUSH_FAIL = 1;
+    IM_CHAT_END_REASON_STREAM_PULL_FAIL = 2;
+    IM_CHAT_END_REASON_SYSTEM = 3;
+    IM_CHAT_END_REASON_OTHER_NETWORK_FAIL = 4;
+    IM_CHAT_END_REASON_AGORA_NETWORK_FAIL = 5;
+    IM_CHAT_END_REASON_COINS_NOT_ENOUGH = 6;
+    IM_CHAT_END_REASON_TIMEOUT_NO_START = 7;
+}
+
+message CommandChatEnd {
+  string cid = 1;
+  string tip = 2;
+  ChatEndType endType = 3; // 挂断类型
+  ChatEndReason reason = 4; // 挂断 原因
+  string cut_id =5; // 挂断的用户id
+}
+
+message CommandCoinChange {
+  int32 gold = 1;                 // 更新后的金币
+  int32 change_gold = 2;          // 变更的金币
+}
+
+enum TypeUserSceneUpload {
+  IM_TSU_SCENE_UNKNOWN = 0;                         // 未知
+  IM_TSU_SCENE_LOOK_UP_RATHER_THAN_3_SECONDS = 1;   // 用户浏览主播主页超过3s
+  IM_TSU_SCENE_FOLLOW_HOST_FIRST = 2;               // 用户首次关注主播
+  IM_TSU_SCENE_CALL_HOST_CANCEL_IN_10_SECONDS = 3;  // 用户（5~10s内）取消拨打主播
+  IM_TSU_SCENE_CALL_HOST_TIMEOUT = 4;               // 拨打主播超时接听
+  IM_TSU_SCENE_LOOK_UP_RATHER_THAN_10_SECONDS = 5;  // 用户浏览主播主页超过10s
+}
+
+// CommandUserSceneUpload 用户场景上报协议
+message CommandUserSceneUpload {
+  TypeUserSceneUpload scene_id = 1;                 // 场景id
+  string u_id = 2;                                  // 上报者
+  string a_id = 3;                                  // 对象id
+}
+
+
+/************************************指令消息定义结束************************************/
+
+
+message HeartBeatMessage {
+  string cid = 1; // call id
+  string match_id = 2; // match id
+  HeartBeatScene scene = 3;
+}
+
+enum HeartBeatScene {
+  HeartBeat_Scene_Front = 0;        // 前台
+  HeartBeat_Scene_Background = 1;   // 后台
 }
 
 /************************************消息体定义结束************************************/
@@ -220,3 +342,22 @@ enum ImMessageStatus {
   IM_MS_NORMAL = 1; // 正常的
   IM_MS_RECALL = 2; // 撤回
 }
+
+
+
+/************************************service开始************************************/
+
+service ConnectInt {
+  //  消息投递
+  rpc DeliverMessage (DeliverMessageReq) returns (DeliverMessageResp);
+}
+
+message DeliverMessageReq {
+  string user_id = 1; // 用户id
+  ImMessageSend message_send = 2; // 数据
+}
+
+message DeliverMessageResp {
+}
+
+/************************************service结束************************************/
